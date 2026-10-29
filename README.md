@@ -6,6 +6,8 @@ timescales, records frames with PresentMon, and produces local CSV and HTML repo
 
 **Release:** 1.0.8 · **Analyzer:** 1.2.0 · **Formulas:** 1.1.0
 
+**[⬇ Download ChickenBench (ZIP)](https://github.com/MemLatBro/ChickenBench/archive/refs/heads/main.zip)**
+
 The analysis reports absolute performance, retention, degradation rates, and
 between-lap variation separately. A configuration that retains more of its starting
 performance is not necessarily faster in absolute terms.
