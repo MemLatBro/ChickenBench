@@ -1,6 +1,6 @@
 # Contributing
 
-Use Python 3.9 or newer and run `python scripts/run_tests.py` from the repository
+Use Python 3.13 or newer and run `python scripts/run_tests.py` from the repository
 root before proposing analysis or launcher changes. No pip dependencies are
 required. Tests never launch CS2 or PresentMon.
 

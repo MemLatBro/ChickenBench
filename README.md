@@ -17,7 +17,7 @@ performance is not necessarily faster in absolute terms.
 - Download a compatible [PresentMon console executable](https://github.com/GameTechDev/PresentMon/releases)
   and put it in `tools/`. The configured command-line flags target the 2.x console
   interface; adjust `PresentMonArgs` if your selected release differs.
-- Analysis: Python 3.9 or newer. No pip packages are needed. The analysis can run
+- Analysis: Python 3.13 or newer. No pip packages are needed. The analysis can run
   independently on Windows, Linux, or macOS using existing captures.
 
 ## Quick start
