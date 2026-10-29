@@ -1,0 +1,99 @@
+ChickenBench v1.0.7 - CS2 console commands reference
+=====================================================
+[tested] = confirmed working on your PC during setup (2026-10-25)
+[runner] = used by cb_runner.ps1, not yet confirmed by a run
+[std]    = standard CS2 command, not specifically tested here
+
+LOADING ANGEL'S BENCHMARK MAP
+-----------------------------
+map_workshop 3240880604 de_dust2        [tested] Loads the benchmark from the main menu.
+                                                 The map name is required: the benchmark is
+                                                 Dust2 + an add-on.
+map_workshop 3240880604                 Does NOT work (missing map name). This is the
+                                        command the old GitHub script used.
+host_workshop_map 3240880604            Unreliable: worked once, then did nothing.
+
+LAPS / RESTARTS
+---------------
+mp_restartgame 1                        [tested] Restarts the round after 1 second. Angel's
+                                                 countdown and flythrough start over.
+                                                 Does NOT delete chickens (runner run,
+                                                 2026-10-25: counts accumulated 100, 300, 600...).
+                                                 BUT chickens spawned a few seconds BEFORE a
+                                                 restart: about half vanished (v1.0.4/1.0.5).
+                                                 The runner now spawns right AFTER the restart.
+mp_restartgame                          Without a number it only prints the current value.
+
+CHICKENS
+--------
+ent_create chicken                      [tested] One chicken where your crosshair points.
+                                                 Useless on Angel's map (camera is hidden).
+ent_create chicken origin "X Y Z"       [tested] One chicken at exact coordinates.
+exec cb_route01                         [tested] +100 chickens along the camera route.
+exec cb_route01; exec cb_route02; exec cb_route03; exec cb_route04; exec cb_route05
+                                        [tested] 500 chickens (about 45 FPS avg here).
+                                                 Never exec the same stage twice: it stacks
+                                                 chickens on identical spots.
+ent_find chicken                        [tested] Lists chickens and prints "Found N matches."
+ent_fire chicken kill                   [runner] Removes every chicken (cb_clear.cfg).
+ent_remove_all chicken                  [runner] Removes every chicken silently (backup).
+exec cb_s01                             [runner] +50 new chickens on the route (stages
+                                                 cb_s01..cb_s20, 1000 unique positions).
+report_entities                         [std]    Entity counts by type (cb_count.cfg).
+
+LOAD / SPEED
+------------
+sv_cheats 1                             [tested] Needed for timescale and ent_create.
+                                                 Angel's map sets it already.
+host_timescale 2                        [tested] Game runs 2x. Also tried 10x (FPS ~100).
+host_timescale 1                        [std]    Back to normal speed.
+
+SEEING THE CONSOLE OUTPUT
+-------------------------
+log_flags General Console InputService Server Developer -donotecho
+                                        [tested] Brings output back in the console WINDOW, but
+                                                 CS2 reports it as "Enabling flag donotecho" and
+                                                 [Console] lines then do NOT reach console.log.
+                                                 The runner no longer uses it.
+exec cb_ack_7                           [runner] Deliberately missing file: CS2 logs
+                                                 "couldn't exec ... cb_ack_7.cfg" to console.log,
+                                                 which the runner uses as a confirmation.
+getpos                                  [std]    Prints your position and view angles.
+cl_showfps 1                            [std]    Small FPS counter.
+
+SESSION / LAUNCH OPTIONS (used by the runner)
+---------------------------------------------
+-condebug                               [tested] Writes the console to
+                                                 game\csgo\console.log.
+-netconport 2121                        [tested] Does NOT work: CS2 accepts it but never
+                                                 opens the port. Not used any more.
+bind pgdn "exec cb_cmd"                 [tested] How the runner sends in-game commands: it
+                                                 writes cfg\cb_cmd.cfg, then presses Page
+                                                 Down. Binds work IN-GAME ONLY, not in the
+                                                 main menu. F11 did not work on this PC.
+exec cb_cmd                             [tested] Runs the current command batch by hand.
+hideconsole                             [std]    Closes the console (an open console
+                                                 swallows key presses).
++exec cb_init                           [runner] Launch option; runs cb_init.cfg, which sets
+                                                 the bind. The runner also runs it when it
+                                                 types the map command.
+-console                                [tested] Does NOT open the console at start-up on
+                                                 this PC. The runner presses ~ if needed.
++con_enable 1                           [std]    Enables the developer console.
+disconnect                              [std]    Leaves the map. Angel's script does this at the
+                                                 end of a run to print the VProf report.
+quit                                    [std]    Closes CS2.
+
+ANGEL'S LAP TIMELINE (game seconds after round start; divide by the timescale)
+-----------------------------------------------------------------------------
+0       round starts (mp_restartgame), bots placed, countdown begins
+7.0     flythrough starts (7,100 camera frames at 64 per second = 110.9 s)
+117.9   flythrough ends, end screen
+~124    script sends "disconnect" unless the round was restarted first
+Runner capture window: 9 to 113. Restart at 114.
+
+NOTES
+-----
+- Angel's built-in VProf report excludes most frames at high timescales and is not
+  representative. Use the PresentMon data instead.
+- Chickens cost little when off screen. That is why they are spread along the route.

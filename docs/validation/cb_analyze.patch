@@ -1,0 +1,247 @@
+--- original/cb_analyze.py
++++ ChickenBench_1.0.7/cb_analyze.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""ChickenBench analyzer v1.0.2
++"""ChickenBench analyzer v1.2.0 (capture package v1.0.7)
+ 
+ Reads every run folder under Results/ (each has laps.csv + frames/*.csv from PresentMon),
+ computes per-lap metrics, aggregates per config label / mode / load level, compares every
+@@ -10,6 +10,7 @@
+   Results/comparison.csv    gap vs baseline per level
+   Results/report.html       charts + tables
+ 
++Additional versioned stability exports preserve legacy CSV schemas and report sections.
+ Standard library only. Usage:  py -3 cb_analyze.py Results --baseline JEDEC
+ """
+ import argparse
+@@ -18,10 +19,15 @@
+ import math
+ import os
+ import statistics
++import hashlib
++import shutil
+ import sys
+ from datetime import datetime
+ 
+-VERSION = '1.0.2'
++VERSION = '1.2.0'
++
++from cb_stability import build_metrics, write_outputs
++from cb_stability_report import render_stability, write_standalone
+ FT_COLUMNS = ['MsBetweenPresents', 'msBetweenPresents', 'FrameTime']
+ USABLE_STATUS = {'ok'}
+ MIN_FRAMES_P01 = 3000   # below this the 0.1% low rests on fewer than 3 frames
+@@ -43,7 +49,7 @@
+ 
+ 
+ # ---------------------------------------------------------------- frame data
+-def load_frametimes(path):
++def load_frametimes(path, diagnostics=None):
+     """Return (list of frame times in ms, column used) or (None, reason)."""
+     with open(path, newline='', encoding='utf-8-sig', errors='replace') as fh:
+         reader = csv.DictReader(fh)
+@@ -53,13 +59,23 @@
+             return None, 'no frame-time column (expected one of %s)' % ', '.join(FT_COLUMNS)
+         sc_col = 'SwapChainAddress' if 'SwapChainAddress' in fields else None
+         rows = []
++        rejected = {}
++        total_rows = 0
+         for row in reader:
++            total_rows += 1
++            chain = row.get(sc_col, '') if sc_col else ''
+             try:
+                 v = float(row[col])
+             except (TypeError, ValueError):
++                rejected[chain] = rejected.get(chain, 0) + 1
+                 continue
+             if 0 < v < 120000:      # keep freezes (up to 2 min); dropping them would inflate the FPS
+-                rows.append((row.get(sc_col, '') if sc_col else '', v))
++                rows.append((chain, v))
++            else:
++                rejected[chain] = rejected.get(chain, 0) + 1
++    if diagnostics is not None:
++        diagnostics.update(total_rows=total_rows, rejected_rows=sum(rejected.values()),
++                           other_chain_rows=0, selected_chain_rejected_rows=0)
+     if not rows:
+         return None, 'no valid frames'
+     if sc_col:   # keep the swap chain with the most presents (the game's)
+@@ -68,8 +84,13 @@
+             counts[k] = counts.get(k, 0) + 1
+         main = max(counts, key=counts.get)
+         ft = [v for k, v in rows if k == main]
++        if diagnostics is not None:
++            diagnostics.update(other_chain_rows=len(rows) - len(ft),
++                               selected_chain_rejected_rows=rejected.get(main, 0))
+     else:
+         ft = [v for _, v in rows]
++        if diagnostics is not None:
++            diagnostics['selected_chain_rejected_rows'] = sum(rejected.values())
+     return ft, col
+ 
+ 
+@@ -196,6 +217,8 @@
+         steps = log_ticks(10 ** math.floor(math.log10(lo)), 10 ** math.ceil(math.log10(hi)))
+         y0 = max([t for t in steps if t <= lo] or [steps[0]])
+         y1 = min([t for t in steps if t >= hi] or [steps[-1]])
++        if y1 <= y0:  # A flat power-of-ten curve still needs a nonzero axis span.
++            y0, y1 = y0 / 10.0, y1 * 10.0
+         ticks = log_ticks(y0, y1)
+         tr = math.log10
+     else:
+@@ -261,6 +284,8 @@
+     steps = log_ticks(10 ** math.floor(math.log10(lo)), 10 ** math.ceil(math.log10(hi)))
+     y0 = max([t for t in steps if t <= lo] or [steps[0]])
+     y1 = min([t for t in steps if t >= hi] or [steps[-1]])
++    if y1 <= y0:
++        y0, y1 = y0 / 10.0, y1 * 10.0
+     xmax = max(len(ys) for _, ys in series)
+ 
+     def X(i):
+@@ -339,7 +364,24 @@
+     ap.add_argument('results', nargs='?', default='Results')
+     ap.add_argument('--baseline', default='JEDEC')
+     ap.add_argument('--include-test', action='store_true', help='include TEST runs')
++    ap.add_argument('--output-dir', help='write reports here instead of the input Results folder')
++    ap.add_argument('--reference-chickens', type=float, help='reference workload for retention, independently of --baseline')
++    ap.add_argument('--reference-timescale', type=float, help='reference timescale for retention')
++    ap.add_argument('--stability-bootstrap', type=int, default=2000, metavar='N',
++                    help='whole-sweep/run resamples (default 2000); 0 disables intervals')
++    ap.add_argument('--stability-seed', type=int, default=1729)
++    ap.add_argument('--stability-count-tolerance-pct', type=float, default=10.0,
++                    help='explicit fallback only when run_info.txt lacks the runner tolerance')
++    ap.add_argument('--include-unverified-imports', action='store_true',
++                    help='analyze imported_unverified laps provisionally; never add them to legacy summaries')
+     args = ap.parse_args()
++    for mode, ref in [('chickens', args.reference_chickens), ('timescale', args.reference_timescale)]:
++        if ref is not None and (not math.isfinite(ref) or ref < 0 or (mode == 'timescale' and ref == 0)):
++            ap.error('invalid reference workload for ' + mode)
++    if args.stability_bootstrap != 0 and args.stability_bootstrap < 200:
++        ap.error('--stability-bootstrap must be zero or at least 200')
++    if not math.isfinite(args.stability_count_tolerance_pct) or not 0 <= args.stability_count_tolerance_pct <= 100:
++        ap.error('count tolerance must be between 0 and 100 percent')
+ 
+     root = args.results
+     if not os.path.isdir(root):
+@@ -355,12 +397,27 @@
+             for r in csv.DictReader(fh):
+                 if r['label'] == 'TEST' and not args.include_test:
+                     continue
++                if r.get('status') == 'imported_unverified' and not args.include_unverified_imports:
++                    continue
++                r['_source_status'] = r.get('status', '')
++                r['_source_note'] = r.get('note', '')
+                 r['run'] = d
+-                r['level'] = int(r['level'])
++                try:
++                    r['level'] = int(r['level'])
++                except (ValueError, TypeError, KeyError):
++                    ap.error('invalid workload coordinate in %s; preserve and correct the manifest before analysis' % lp)
+                 fpath = os.path.join(run, *r['frames_csv'].replace('\\', '/').split('/'))
+                 metrics, note = {}, ''
+-                if r['status'] in ('ok', 'chickens_lost') and os.path.isfile(fpath):
+-                    ft, col = load_frametimes(fpath)
++                if r['status'] in ('ok', 'chickens_lost', 'imported_unverified') and os.path.isfile(fpath):
++                    diagnostics = {}
++                    ft, col = load_frametimes(fpath, diagnostics)
++                    r['_frame_diagnostics'] = diagnostics
++                    r['_frame_column'] = col if ft is not None else ''
++                    hasher = hashlib.sha256()
++                    with open(fpath, 'rb') as frame_stream:
++                        for part in iter(lambda: frame_stream.read(1024 * 1024), b''):
++                            hasher.update(part)
++                    r['_frames_sha256'] = hasher.hexdigest()
+                     if ft is None:
+                         note = col
+                     else:
+@@ -377,7 +434,7 @@
+                             note = 'too few frames for 1% low'
+                         elif metrics['frames'] < MIN_FRAMES_P01:
+                             note = 'too few frames for 0.1% low'
+-                elif r['status'] in ('ok', 'chickens_lost'):
++                elif r['status'] in ('ok', 'chickens_lost', 'imported_unverified'):
+                     note = 'frames file missing'
+                 r.update(metrics)
+                 r['note'] = note
+@@ -386,10 +443,35 @@
+     if not laps:
+         sys.exit('No laps found under %s (each run folder needs a laps.csv).' % root)
+ 
++    output = args.output_dir or root
++    os.makedirs(output, exist_ok=True)
++    # Snapshot prior analytical files before replacing them; capture inputs are untouched.
++    names = ('lap_metrics.csv', 'summary.csv', 'comparison.csv', 'report.html',
++             'stability_metrics.csv', 'stability_laps.csv', 'stability_metadata.json', 'stability_report.html',
++             'stability_summary.csv')
++    existing = [name for name in names if os.path.isfile(os.path.join(output, name))]
++    backup = None
++    if existing:
++        stamp = datetime.now().strftime('%Y%m%dT%H%M%S%f')
++        backup = os.path.join('analysis_backups', stamp)
++        backup_path = os.path.join(output, backup)
++        os.makedirs(backup_path)
++        for name in existing:
++            shutil.copy2(os.path.join(output, name), os.path.join(backup_path, name))
++        print('Preserved previous analytical outputs in %s' % backup_path)
++    stability_rows, stability_laps, stability_meta = build_metrics(
++        laps, root, VERSION,
++        references={'chickens': args.reference_chickens, 'timescale': args.reference_timescale},
++        bootstrap_samples=args.stability_bootstrap, seed=args.stability_seed,
++        fallback_count_tolerance=args.stability_count_tolerance_pct)
++    stability_meta['previous_output_backup'] = backup
++    stability_meta['previous_report_backup'] = backup if 'report.html' in existing else None
++    write_outputs(output, stability_rows, stability_laps, stability_meta)
++
+     lap_fields = ['run', 'label', 'mode', 'level', 'pass', 'timescale', 'chickens_expected', 'chickens_found',
+                   'status', 'note', 'frames', 'seconds', 'avg_fps', 'p1_fps', 'p01_fps', 'ft_p50_ms', 'ft_p90_ms',
+                   'ft_p99_ms', 'ft_p999_ms', 'ft_max_ms', 'ft_sd_ms', 'cov_pct']
+-    write_csv(os.path.join(root, 'lap_metrics.csv'), laps, lap_fields)
++    write_csv(os.path.join(output, 'lap_metrics.csv'), laps, lap_fields)
+ 
+     # Aggregate usable laps
+     groups = {}
+@@ -409,7 +491,7 @@
+             a[m + '_mean'], a[m + '_sd'], a[m + '_ci95'] = s['mean'], s['sd'], s['ci95']
+         summary.append(a)
+     sum_fields = ['mode', 'label', 'level', 'laps', 'min_frames'] + [m + k for m in ('avg_fps', 'p1_fps', 'p01_fps', 'ft_p50_ms', 'ft_p99_ms', 'ft_p999_ms', 'cov_pct') for k in ('_mean', '_sd', '_ci95')]
+-    write_csv(os.path.join(root, 'summary.csv'), summary, sum_fields)
++    write_csv(os.path.join(output, 'summary.csv'), summary, sum_fields)
+ 
+     comparison = []
+     modes = sorted({k[0] for k in groups})
+@@ -433,7 +515,7 @@
+                 if ok:
+                     comparison.append(row)
+     cmp_fields = ['mode', 'label', 'baseline', 'level'] + [m + k for m in ('avg_fps', 'p1_fps', 'p01_fps') for k in ('_gap_pct', '_gap_ci95')]
+-    write_csv(os.path.join(root, 'comparison.csv'), comparison, cmp_fields)
++    write_csv(os.path.join(output, 'comparison.csv'), comparison, cmp_fields)
+ 
+     # ------------------------------------------------------------ HTML
+     H = ['<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+@@ -442,6 +524,9 @@
+          '<p class="muted">Generated %s by cb_analyze.py v%s. Baseline: <b>%s</b>. Averages are frames / time; '
+          '1%% low and 0.1%% low are 1000 / 99th and 99.9th percentile frame time. Whiskers are 95%% confidence intervals across passes.</p>'
+          % (datetime.now().strftime('%Y-%m-%d %H:%M'), VERSION, html.escape(args.baseline))]
++
++    H.append('<p><a href="#stability">Performance retention and stability measures</a> | '
++             '<a href="stability_report.html">Standalone analysis report</a></p>')
+ 
+     for mode in modes:
+         labels = sorted({k[1] for k in groups if k[0] == mode})
+@@ -531,12 +616,14 @@
+                 html.escape(r['run']), html.escape(r['label']), level_name(r['mode'], r['level']), html.escape(r['pass']),
+                 html.escape(r['status']), html.escape(r['note']), html.escape(str(r.get('chickens_found', '')))))
+         H.append('</table></div>')
++    H.append(render_stability(stability_rows, stability_meta))
+     H.append('</body></html>')
+-    with open(os.path.join(root, 'report.html'), 'w', encoding='utf-8', newline='\r\n') as fh:
++    write_standalone(os.path.join(output, 'stability_report.html'), stability_rows, stability_meta)
++    with open(os.path.join(output, 'report.html'), 'w', encoding='utf-8', newline='\r\n') as fh:
+         fh.write('\n'.join(H))
+ 
+     print('ChickenBench analyzer v%s: %d laps read, %d usable groups.' % (VERSION, len(laps), len(summary)))
+-    print('Wrote %s' % os.path.join(root, 'report.html'))
++    print('Wrote %s' % os.path.join(output, 'report.html'))
+ 
+ 
+ if __name__ == '__main__':

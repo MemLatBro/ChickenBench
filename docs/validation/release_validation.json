@@ -1,0 +1,16 @@
+{
+  "distribution_version": "1.0.7",
+  "analyzer_version": "1.2.0",
+  "formula_version": "1.1.0",
+  "release_checks": {
+    "automated_tests_passed": 80,
+    "legacy_csv_golden_bytes_unchanged": true,
+    "capture_changes_are_version_labels_only": true,
+    "bundled_example_outputs_unchanged": false,
+    "live_capture_executed": false,
+    "bundled_example_per_load_measurements_unchanged": true,
+    "aggregate_scores_added": true,
+    "embedded_summary_csv_matches": true
+  },
+  "original_source_zip_sha256": "b50a4a3ded44e3a065728c035914a341fd740ddf4b6364ca6417720fde1efaf2"
+}

@@ -1,0 +1,103 @@
+{
+  "lap_metrics.csv": {
+    "identical_to_original": true,
+    "sha256": "5b3295c7e1aeca76255952bc5518e445463fff40047c1c72aa9ebe582a39b373"
+  },
+  "summary.csv": {
+    "identical_to_original": true,
+    "sha256": "fa1d12a57f8ca3dc19ffe4d9271ca76b854e8bda4a5238ed995ff2e1af82dbb7"
+  },
+  "comparison.csv": {
+    "identical_to_original": true,
+    "sha256": "823026ef69a832dce3f62115f1627c03e6c4e87358a0beb633642eb37db5d2f8"
+  },
+  "unchanged_original_files": [
+    "cs2_cfg/cb_s01.cfg",
+    "cs2_cfg/cb_s02.cfg",
+    "cs2_cfg/cb_s03.cfg",
+    "cs2_cfg/cb_s04.cfg",
+    "cs2_cfg/cb_s05.cfg",
+    "cs2_cfg/cb_s06.cfg",
+    "cs2_cfg/cb_s07.cfg",
+    "cs2_cfg/cb_s08.cfg",
+    "cs2_cfg/cb_s09.cfg",
+    "cs2_cfg/cb_s10.cfg",
+    "cs2_cfg/cb_s11.cfg",
+    "cs2_cfg/cb_s12.cfg",
+    "cs2_cfg/cb_s13.cfg",
+    "cs2_cfg/cb_s14.cfg",
+    "cs2_cfg/cb_s15.cfg",
+    "cs2_cfg/cb_s16.cfg",
+    "cs2_cfg/cb_s17.cfg",
+    "cs2_cfg/cb_s18.cfg",
+    "cs2_cfg/cb_s19.cfg",
+    "cs2_cfg/cb_s20.cfg",
+    "tools/PUT_PRESENTMON_HERE.txt"
+  ],
+  "automated_tests": 80,
+  "html_structure": [
+    {
+      "directory": "work/aggregate_demo",
+      "embedded_csv_exact": true,
+      "metric_controls_exercised": 20,
+      "external_dependencies": 0,
+      "embedded_summary_csv_exact": true,
+      "summary_cards_present": true
+    },
+    {
+      "directory": "work/aggregate_replay",
+      "embedded_csv_exact": true,
+      "metric_controls_exercised": 10,
+      "external_dependencies": 0,
+      "embedded_summary_csv_exact": true,
+      "summary_cards_present": true
+    }
+  ],
+  "live_capture_executed": false,
+  "release_version": "1.0.7",
+  "analyzer_version": "1.2.0",
+  "formula_version": "1.1.0",
+  "version_labels_updated": [
+    "CB_Analyze.bat",
+    "CB_Run.bat",
+    "CS2_COMMANDS.txt",
+    "cb_runner.ps1",
+    "cb_settings.ini"
+  ],
+  "bundled_example_numerical_outputs_unchanged": true,
+  "bundled_examples_regenerated": true,
+  "aggregate_checks": {
+    "work/aggregate_demo": {
+      "lap_metrics.csv": {
+        "identical": true,
+        "sha256": "5b3295c7e1aeca76255952bc5518e445463fff40047c1c72aa9ebe582a39b373"
+      },
+      "summary.csv": {
+        "identical": true,
+        "sha256": "fa1d12a57f8ca3dc19ffe4d9271ca76b854e8bda4a5238ed995ff2e1af82dbb7"
+      },
+      "comparison.csv": {
+        "identical": true,
+        "sha256": "823026ef69a832dce3f62115f1627c03e6c4e87358a0beb633642eb37db5d2f8"
+      },
+      "per_load_measurements_and_intervals_unchanged": true,
+      "independent_csv_trapezoids_match": true
+    },
+    "work/aggregate_replay": {
+      "lap_metrics.csv": {
+        "identical": true,
+        "sha256": "f66918408aaf69997bf92734246918940f7abb512e4a5b12b7d00207330da581"
+      },
+      "summary.csv": {
+        "identical": true,
+        "sha256": "8b275a68352976cc457de0bd3b2f284bbdd3050714bf79f0669d77cfe6bbbef5"
+      },
+      "comparison.csv": {
+        "identical": true,
+        "sha256": "c8a6de8814034f31f87a426176de65d7a13f1de8c9ce8a1f11c14cc26bfe5cce"
+      },
+      "per_load_measurements_and_intervals_unchanged": true,
+      "independent_csv_trapezoids_match": true
+    }
+  }
+}

@@ -1,0 +1,32 @@
+# Local captures and analytical outputs
+/Results/
+/analysis_backups/
+/dist/
+/build/
+/DemoResults/
+/DemoAnalysis/
+/Analysis/
+/ReplayResults/
+/ReplayAnalysis/
+/OriginalCaptures/
+*.zip
+
+# Runtime dependencies are installed separately
+*.exe
+*.dll
+*.sys
+*.vpk
+
+# Python and editor files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

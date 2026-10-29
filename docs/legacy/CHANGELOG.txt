@@ -1,0 +1,129 @@
+HISTORICAL DOCUMENT: this describes the older flat 1.0.7 package.
+For the current grouped layout, see ../../README.md.
+
+ChickenBench changelog
+======================
+
+v1.0.7  (2026-10-28)
+  - Added analyzer 1.2.0 with formula specification 1.1.0.
+  - Singular per-metric retention scores and native aggregates; visible FPS/low-FPS cards.
+  - stability_summary.csv adds workload-wide values, range, coverage and uncertainty.
+  - Separate retention, degradation, local-rate and variability CSV/HTML exports.
+  - Each configuration uses its first workload as its reference, averaging repeats.
+  - Original CSV calculations/schemas and HTML sections preserved; prior outputs backed up.
+  - Includes validation, formula documentation and provisional Testrun5 examples.
+  - Package/runner version labels now 1.0.7; capture behavior/settings unchanged.
+
+v1.0.6  (2026-10-25)
+  - v1.0.5 test pass: new coordinates made no difference (about 29 lost per lap vs about
+    27 in v1.0.4), so spawn position was not the cause. In v1.0.3, which spawned right
+    AFTER the restart, none were lost even at 2900. About half of every batch spawned at
+    the END of a lap (seconds before mp_restartgame) disappeared.
+  - Spawn timing moved back to right after the restart: each lap counts the survivors,
+    spawns only its own 50 new chickens during Angel's ~7 s countdown and confirms them
+    before the capture (SpawnConfirmBy = 7 s; capture starts at 9 s). Nothing is spawned
+    at the end of a lap. Status spawn_unconfirmed if they are not all there in time.
+  - Three chicken counts per lap in laps.csv and the runner window: after the restart,
+    after the spawn, at the end of the lap.
+  - Pass-start clearing unchanged (kept); can be switched off with
+    ClearChickensAtPassStart=0 (later passes then reload the map instead).
+  - Settings: SpawnConfirmBy and ClearChickensAtPassStart replace SpawnDeadline and
+    SpawnSettle. Stage files are the v1.0.5 ones (only the timing changed).
+  - FIX: a lap that failed with no_ack after a normal lap could stop the runner when
+    writing laps.csv (missing columns); all lap records now have the same columns.
+
+v1.0.5  (2026-10-25)  - stage files only, nothing else changed
+  - v1.0.4 test pass: every 50-chicken batch was spawned and counted, but about half of
+    each new batch was gone by the end of the next lap (50->30, 80->51 ... 257->230).
+  - Cause suspected: spawn points. v1.0.4 used camera height minus eye height (64) + 8,
+    which is under the floor when the camera flies low and hundreds of units up in the
+    overhead shots (22% of the route), so chickens fell through the map or from a height.
+  - New cs2_cfg\cb_s01..cb_s20.cfg: points only from level, low camera stretches
+    (pitch <= 10, feet <= 220), spawned 24 units below the camera (always open air), so
+    they drop a short way onto the real floor. Still 20 x 50, 1000 unique points.
+
+v1.0.4  (2026-10-25)
+  - FIX: chickens survive mp_restartgame, so v1.0.3 respawned every stage on top of the
+    old ones (labelled 500 = really 2000, stacked; CS2 crashed near 3000).
+  - Chicken sweep now accumulates: 0, 50, 100 ... 500, always low -> high within a pass.
+    The next lap's 50 NEW chickens are spawned AFTER PresentMon has finished, the runner
+    counts (ent_find) until they all exist, waits SpawnSettle (2 s), then restarts.
+    No spawn work happens inside a capture.
+  - Chickens are cleared once at the start of each pass (ent_fire chicken kill +
+    ent_remove_all chicken), and rebuilt to the lap's level after a map reload.
+  - New stage files cs2_cfg\cb_s01..cb_s20.cfg: 50 chickens each, 1000 unique positions
+    spread along the whole route; copied into CS2's cfg folder automatically.
+  - The chicken count is taken after the capture ends (its console output is no longer
+    near the measured frames). New status chickens_extra; tolerance setting
+    ChickenTolerancePct (default 10).
+  - Settings: SpawnDeadline, SpawnSettle, ChickenTolerancePct; ChickenLevels in 50s.
+  - cb_analyze.py v1.0.1: reads PresentMon's byte-order mark correctly.
+  - cb_analyze.py v1.0.2: new report section 'Frame-time spread inside each lap' (median /
+    99th / 99.9th percentile frame time per level, log scale) and an FPS-per-second timeline
+    per level; CoV and percentiles in the table and lap_metrics.csv. Laps whose capture is
+    under 80% of the expected length are marked short_capture and excluded. Frames longer
+    than 5 s are no longer dropped (that hid freezes). Accepts \ or / in frame paths.
+
+v1.0.3  (2026-10-25)
+  - FIX: confirmations never reached the runner. [Console]-channel lines (echo output)
+    show in the console window but are not written to console.log once Angel's map has
+    run, and the runner's "log_flags ... -donotecho" made it worse (CS2 reports it as
+    ENABLING donotecho). Removed log_flags entirely. Each batch now ends with
+    "exec cb_ack_N" (non-existent file); CS2 logs the [InputService] error line, which
+    does reach console.log, and that confirms the batch.
+  - FIX: -console does not open the console at start-up, so the first typed map command
+    went nowhere and the runner waited 90 s. It now checks for "execing cb_init" within
+    6 s of typing and, if missing, presses ~ and types again.
+  - Each lap sets fps_max 0 (CS2 now blocks Angel's script from doing it).
+  - Round start falls back to the key-press time + 1 game-second after 1.5 s (the
+    round-start line is a [Console] line and may be missing from console.log).
+  - Log reader no longer skips lines written while it is reading.
+
+v1.0.2  (2026-10-25)
+  - FIX: key binds do not fire in CS2's main menu (tested: Page Down works in-game only),
+    so v1.0.1 could never pass its link test. The map is now loaded by typing one line
+    into the console (CS2 starts with -console):
+        hideconsole; exec cb_init; map_workshop 3240880604 de_dust2
+    with a retry that toggles the console first, then a by-hand fallback.
+  - The link test now runs in-game, after the map has loaded.
+  - Default command key is now Page Down (tested). Simulated presses now match a real
+    keyboard: scan code + extended-key flag for nav-cluster keys (Page Down, Insert, ...).
+  - Every command batch also runs hideconsole (an open console swallows the key).
+  - Only a real disconnect triggers a map reload; an unconfirmed batch just retries the lap
+    (typing a map command in-game would press game keys).
+  - Settings: BindKey accepts PGDN PGUP INS DEL HOME END F9-F12.
+
+v1.0.1  (2026-10-25)
+  - FIX: CS2 accepts -netconport but never opens the port, so v1.0.0 hung at
+    "Connecting to its console". Commands now go through a cfg file + one bound key:
+    the runner writes cfg\cb_cmd.cfg and presses F11 (bind F11 "exec cb_cmd", set at
+    launch by +exec cb_init). Each batch ends with "echo CB_ACK_n" and the runner
+    waits for it in console.log (3 tries), so every batch is confirmed.
+  - Keys are only sent while CS2 is the active window; otherwise the runner beeps and waits.
+  - First-run fallbacks: type the bind by hand, or load the map by hand (M) and the runner
+    continues from there.
+  - Console output is un-hidden at the start of every batch (Angel's map hides it each round).
+  - Lap status "no_ack" (batch not confirmed) triggers a map reload + one retry.
+  - Settings: NetconPort replaced by BindKey. cb_analyze.py unchanged (still v1.0.0).
+
+v1.0.0  (2026-10-25)
+  - New runner (cb_runner.ps1 + CB_Run.bat) for Angel's CS2 FPS BENCHMARK DUST2 (3240880604),
+    replacing the manual-keypress approach of v0.1.x.
+  - Loads the map with "map_workshop 3240880604 de_dust2" once the main menu is up
+    (the one-argument form and host_workshop_map do not load it reliably).
+  - Endless laps via mp_restartgame 1, timed from the round-start line in console.log.
+  - Commands go over CS2's network console (-netconport); no keystrokes, no focus issues.
+  - Menu: chicken sweep (0-500), timescale sweep (1x-12x), quick test.
+  - Passes alternate ascending / descending to cancel thermal and background drift.
+  - PresentMon capture per lap; chicken count per lap via ent_find.
+  - Automatic map reload + one retry if a lap gets interrupted.
+  - cb_analyze.py + CB_Analyze.bat: per-lap avg / 1% low / 0.1% low from frame times,
+    per-level mean and 95% CI, gap vs baseline label with CI, HTML report.
+
+v0.2.0  (2026-10-25)
+  - cb_route01.cfg ... cb_route10.cfg: 100 chickens each at fixed points along the
+    benchmark's camera route (positioned spawns via ent_create chicken origin "x y z").
+
+v0.1.4
+  - Deathmatch-based manual ChickenBench configs (cb_setup, cb_stage, cb_pos, cb_go,
+    cb_count, cb_clear). Unchanged; still in the CS2 cfg folder.

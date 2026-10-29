@@ -1,0 +1,1 @@
+mode,label,level,laps,min_frames,avg_fps_mean,avg_fps_sd,avg_fps_ci95,p1_fps_mean,p1_fps_sd,p1_fps_ci95,p01_fps_mean,p01_fps_sd,p01_fps_ci95,ft_p50_ms_mean,ft_p50_ms_sd,ft_p50_ms_ci95,ft_p99_ms_mean,ft_p99_ms_sd,ft_p99_ms_ci95,ft_p999_ms_mean,ft_p999_ms_sd,ft_p999_ms_ci95,cov_pct_mean,cov_pct_sd,cov_pct_ci95

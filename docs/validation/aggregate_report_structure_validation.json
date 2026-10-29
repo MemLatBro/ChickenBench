@@ -1,0 +1,18 @@
+[
+  {
+    "directory": "work/aggregate_demo",
+    "embedded_csv_exact": true,
+    "metric_controls_exercised": 20,
+    "external_dependencies": 0,
+    "embedded_summary_csv_exact": true,
+    "summary_cards_present": true
+  },
+  {
+    "directory": "work/aggregate_replay",
+    "embedded_csv_exact": true,
+    "metric_controls_exercised": 10,
+    "external_dependencies": 0,
+    "embedded_summary_csv_exact": true,
+    "summary_cards_present": true
+  }
+]

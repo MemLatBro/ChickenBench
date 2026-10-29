@@ -1,0 +1,10 @@
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.ini text eol=crlf
+*.cfg text eol=crlf
+# Byte-exact CSV fixtures and example outputs: never convert line endings
+*.csv -text
